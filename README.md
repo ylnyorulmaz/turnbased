@@ -9,7 +9,10 @@ An asset-free, turn-based strategy foundation built with Godot 4. It renders a s
 - Four terrain types: Sea, Plains, Hills, and Mountains.
 - Runtime-generated pixel textures plus coordinate-seeded vector details; there are no image assets.
 - Elevated top and side faces for an isometric 2D look.
-- Procedurally drawn Settler, Warrior, and City visuals.
+- Animated water shimmer, coastline foam, richer terrain silhouettes, and a soft island backdrop.
+- Procedurally drawn Settler, Warrior, and City visuals with faction bases, nameplates, flags, smoke, and idle motion.
+- Hovered route previews, pulsing move/attack markers, animated turn banners, and polished HUD framing.
+- Asset-free movement dust, city-founding bursts, impact sparks, damage text, and camera shake.
 - Player → AI round phases with separate movement resets and input locking.
 - A simple AI that founds a city, pathfinds toward the nearest player target, and attacks when adjacent.
 - Settlers found named cities and are consumed in the process.
@@ -79,6 +82,8 @@ scripts/map_generator.gd         Seeded terrain data generation and hex coordina
 scripts/hex_map.gd               Isometric renderer, runtime textures, picking and highlights
 scripts/procedural_unit.gd       Asset-free unit art and movement rules
 scripts/procedural_city.gd       Asset-free faction city renderer
+scripts/procedural_effect.gd     Movement, combat and city-founding feedback
+scripts/hud_chrome.gd            Procedural HUD framing
 scripts/camera_controller.gd     Strategy camera controls and map framing
 tests/map_generator_test.gd      Headless generator smoke test
 tests/game_smoke_test.gd         Player move, city founding and full AI phase test

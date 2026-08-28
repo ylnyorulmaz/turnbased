@@ -20,6 +20,9 @@ var attack_damage := 0
 var selected := false
 
 var team_color := Color("43d9b5")
+var visual_time := 0.0
+var hit_flash := 0.0
+var _phase_offset := 0.0
 
 
 func configure(kind: int, coord: Vector2i, player_id: int = 1) -> void:
@@ -40,6 +43,14 @@ func configure(kind: int, coord: Vector2i, player_id: int = 1) -> void:
 	movement_left = movement_max
 	health = health_max
 	team_color = Color("43d9b5") if owner_id == 1 else Color("ef735c")
+	_phase_offset = float(abs(coord.x * 17 + coord.y * 29 + owner_id * 11)) * 0.13
+	queue_redraw()
+
+
+func _process(delta: float) -> void:
+	visual_time = fmod(visual_time + delta, TAU * 100.0)
+	if hit_flash > 0.0:
+		hit_flash = maxf(0.0, hit_flash - delta * 4.8)
 	queue_redraw()
 
 
@@ -60,6 +71,7 @@ func spend_movement(amount: int) -> void:
 
 func take_damage(amount: int) -> bool:
 	health = maxi(0, health - amount)
+	hit_flash = 1.0
 	queue_redraw()
 	return health <= 0
 
@@ -83,23 +95,52 @@ func movement_cost(terrain: int) -> int:
 
 
 func _draw() -> void:
-	# The ellipse reads as a footprint on the flattened isometric tile.
+	var selection_pulse := 0.5 + 0.5 * sin(visual_time * 5.2)
+	# A faction-colored command base keeps units readable against every terrain.
 	draw_colored_polygon(
-		_ellipse_points(Vector2(0.0, 2.0), Vector2(20.0, 7.5)), Color(0.0, 0.0, 0.0, 0.34)
+		_ellipse_points(Vector2(1.5, 4.0), Vector2(23.0, 9.0)), Color(0.0, 0.0, 0.0, 0.40)
+	)
+	draw_colored_polygon(
+		_ellipse_points(Vector2(0.0, 1.0), Vector2(20.5, 7.5)), team_color.darkened(0.48)
+	)
+	draw_polyline(
+		_closed(_ellipse_points(Vector2(0.0, 1.0), Vector2(20.5, 7.5))),
+		team_color.lightened(0.16),
+		2.0,
+		true,
 	)
 	if selected:
+		draw_colored_polygon(
+			_ellipse_points(
+				Vector2(0.0, 1.0),
+				Vector2(27.0 + selection_pulse * 2.0, 11.0 + selection_pulse),
+			),
+			Color(1.0, 0.78, 0.23, 0.06 + selection_pulse * 0.08),
+		)
 		draw_polyline(
-			_closed(_ellipse_points(Vector2(0.0, 1.0), Vector2(24.0, 10.0))),
-			Color(1.0, 0.78, 0.23, 0.98),
-			2.7,
+			_closed(
+				_ellipse_points(
+					Vector2(0.0, 1.0), Vector2(25.0 + selection_pulse * 1.5, 10.0 + selection_pulse)
+				)
+			),
+			Color(1.0, 0.82, 0.30, 0.88 + selection_pulse * 0.12),
+			2.5 + selection_pulse * 0.8,
 			true
 		)
 
+	var bob := sin(visual_time * 2.4 + _phase_offset) * (1.0 if movement_left > 0 else 0.35)
+	draw_set_transform(Vector2(0.0, bob))
 	match unit_kind:
 		UnitKind.SETTLER:
 			_draw_settler()
 		UnitKind.WARRIOR:
 			_draw_warrior()
+	if hit_flash > 0.0:
+		draw_colored_polygon(
+			_ellipse_points(Vector2(0.0, -21.0), Vector2(19.0, 24.0)),
+			Color(1.0, 0.95, 0.76, hit_flash * 0.34),
+		)
+	draw_set_transform(Vector2.ZERO)
 
 	_draw_movement_pips()
 	_draw_health_pips()
@@ -134,6 +175,7 @@ func _draw_settler() -> void:
 		]
 	)
 	draw_colored_polygon(cloak, Color("d9b66f"))
+	draw_polyline(_closed(cloak), Color("5f4731"), 1.2, true)
 	draw_colored_polygon(
 		PackedVector2Array(
 			[
@@ -146,6 +188,7 @@ func _draw_settler() -> void:
 		Color("bc8f4f")
 	)
 	draw_line(Vector2(-10.0, -2.0), Vector2(11.0, -2.0), Color("6b4930"), 1.5, true)
+	draw_line(Vector2(-2.0, -19.0), Vector2(4.0, -5.0), team_color.darkened(0.12), 2.0, true)
 
 	draw_circle(Vector2(0.0, -26.0), 6.2, Color("d7a070"))
 	draw_arc(Vector2(0.0, -27.0), 6.5, PI, TAU, 12, Color("4a3026"), 4.0, true)
@@ -191,7 +234,19 @@ func _draw_warrior() -> void:
 			Vector2(-10.0, -8.0),
 		]
 	)
-	draw_colored_polygon(body, Color("8b3940"))
+	draw_colored_polygon(body, team_color.darkened(0.42))
+	draw_polyline(_closed(body), Color("352d2c"), 1.35, true)
+	draw_colored_polygon(
+		PackedVector2Array(
+			[
+				Vector2(0.0, -22.0),
+				Vector2(8.0, -22.0),
+				Vector2(9.0, -9.0),
+				Vector2(1.0, -6.0),
+			]
+		),
+		team_color.darkened(0.18),
+	)
 	draw_line(Vector2(-8.0, -16.0), Vector2(8.0, -16.0), Color("d4b56a"), 2.0, true)
 	draw_line(Vector2(-5.0, -22.0), Vector2(4.0, -8.0), Color("c6a45a"), 2.3, true)
 
@@ -229,7 +284,8 @@ func _draw_movement_pips() -> void:
 	var start_x := -float(movement_max - 1) * gap * 0.5
 	for index in range(movement_max):
 		var color := team_color if index < movement_left else Color(0.18, 0.22, 0.23, 0.72)
-		draw_circle(Vector2(start_x + float(index) * gap, 8.5), 2.1, color)
+		draw_circle(Vector2(start_x + float(index) * gap, 9.0), 3.0, Color(0.02, 0.04, 0.05, 0.82))
+		draw_circle(Vector2(start_x + float(index) * gap, 9.0), 1.9, color)
 
 
 func _draw_health_pips() -> void:
@@ -237,7 +293,8 @@ func _draw_health_pips() -> void:
 	var start_x := -float(health_max - 1) * gap * 0.5
 	for index in range(health_max):
 		var color := Color("f06b62") if index < health else Color(0.16, 0.18, 0.19, 0.82)
-		draw_circle(Vector2(start_x + float(index) * gap, -45.0), 2.2, color)
+		draw_circle(Vector2(start_x + float(index) * gap, -46.0), 3.0, Color(0.02, 0.04, 0.05, 0.86))
+		draw_circle(Vector2(start_x + float(index) * gap, -46.0), 1.9, color)
 
 
 func _ellipse_points(center: Vector2, radii: Vector2, segments: int = 32) -> PackedVector2Array:

@@ -20,6 +20,8 @@ func _run() -> void:
 	await process_frame
 
 	_check(game.hex_map.cells.size() == 18 * 13, "game created the wrong map size")
+	_check(game.effects_layer != null, "procedural visual effects layer is missing")
+	_check(game.turn_banner.visible, "opening turn banner did not appear")
 	_check(game.units.size() == 4, "game did not spawn two units per faction")
 	_check(game.selected_unit != null, "game did not select the initial Settler")
 	_check(
@@ -34,6 +36,8 @@ func _run() -> void:
 		var start := player_settler.grid_coord
 		var destinations := game.reachable_paths.keys()
 		var destination: Vector2i = destinations[0]
+		game._on_tile_hovered(destination, game.hex_map.get_cell(destination))
+		_check(not game.hex_map.preview_path.is_empty(), "hovered route preview did not appear")
 		game._on_tile_clicked(destination)
 		await create_timer(0.7).timeout
 		_check(player_settler.grid_coord != start, "selected Settler did not move")
@@ -47,6 +51,7 @@ func _run() -> void:
 		await process_frame
 		_check(game.cities.size() == 1, "player city was not created")
 		_check(game.cities[0].owner_id == TurnBasedGame.PLAYER_ID, "city has the wrong owner")
+		_check(game.effects_layer.get_child_count() > 0, "city founding effect did not spawn")
 		_check(
 			(
 				game._first_unit_for_owner(TurnBasedGame.PLAYER_ID, ProceduralUnit.UnitKind.SETTLER)
@@ -104,6 +109,7 @@ func _run() -> void:
 			var health_before := ai_warrior.health
 			game._on_tile_clicked(attack_coord)
 			await create_timer(0.6).timeout
+			_check(game.effects_layer.get_child_count() > 0, "combat feedback effect did not spawn")
 			_check(ai_warrior.health == health_before - 1, "Warrior attack dealt no damage")
 			_check(
 				player_warrior.movement_left == player_warrior.movement_max - 1,
@@ -123,7 +129,7 @@ func _run() -> void:
 	if _failed:
 		quit(1)
 	else:
-		print("Game, city founding, AI turn, and combat smoke test passed.")
+		print("Game, visual feedback, city founding, AI turn, and combat smoke test passed.")
 		quit(0)
 
 
