@@ -1,23 +1,24 @@
-[gd_scene load_steps=9 format=3]
+[gd_scene load_steps=12 format=3]
 
 [ext_resource type="Script" path="res://scripts/game.gd" id="1_game"]
 [ext_resource type="Script" path="res://scripts/hex_map.gd" id="2_map"]
 [ext_resource type="Script" path="res://scripts/camera_controller.gd" id="3_camera"]
+[ext_resource type="Script" path="res://scripts/hud_chrome.gd" id="4_hud"]
 
 [sub_resource type="StyleBoxFlat" id="StylePanel"]
-bg_color = Color(0.035, 0.055, 0.068, 0.94)
+bg_color = Color(0.022, 0.044, 0.057, 0.96)
 border_width_left = 1
 border_width_top = 1
 border_width_right = 1
 border_width_bottom = 1
-border_color = Color(0.25, 0.55, 0.53, 0.42)
-corner_radius_top_left = 10
-corner_radius_top_right = 10
-corner_radius_bottom_right = 10
-corner_radius_bottom_left = 10
-shadow_color = Color(0, 0, 0, 0.28)
-shadow_size = 7
-shadow_offset = Vector2(0, 3)
+border_color = Color(0.29, 0.7, 0.62, 0.52)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+shadow_color = Color(0, 0, 0, 0.42)
+shadow_size = 10
+shadow_offset = Vector2(0, 4)
 
 [sub_resource type="StyleBoxFlat" id="StyleButton"]
 bg_color = Color(0.105, 0.205, 0.21, 1)
@@ -32,6 +33,8 @@ corner_radius_bottom_right = 7
 corner_radius_bottom_left = 7
 content_margin_top = 10.0
 content_margin_bottom = 10.0
+content_margin_left = 12.0
+content_margin_right = 12.0
 
 [sub_resource type="StyleBoxFlat" id="StyleButtonHover"]
 bg_color = Color(0.12, 0.32, 0.31, 1)
@@ -46,6 +49,8 @@ corner_radius_bottom_right = 7
 corner_radius_bottom_left = 7
 content_margin_top = 10.0
 content_margin_bottom = 10.0
+content_margin_left = 12.0
+content_margin_right = 12.0
 
 [sub_resource type="StyleBoxFlat" id="StyleButtonPressed"]
 bg_color = Color(0.07, 0.17, 0.18, 1)
@@ -60,6 +65,39 @@ corner_radius_bottom_right = 7
 corner_radius_bottom_left = 7
 content_margin_top = 10.0
 content_margin_bottom = 10.0
+content_margin_left = 12.0
+content_margin_right = 12.0
+
+[sub_resource type="StyleBoxFlat" id="StyleButtonDisabled"]
+bg_color = Color(0.055, 0.075, 0.08, 0.82)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.24, 0.31, 0.31, 0.5)
+corner_radius_top_left = 7
+corner_radius_top_right = 7
+corner_radius_bottom_right = 7
+corner_radius_bottom_left = 7
+content_margin_top = 10.0
+content_margin_bottom = 10.0
+content_margin_left = 12.0
+content_margin_right = 12.0
+
+[sub_resource type="StyleBoxFlat" id="StyleTurnBanner"]
+bg_color = Color(0.018, 0.038, 0.05, 0.94)
+border_width_left = 2
+border_width_top = 1
+border_width_right = 2
+border_width_bottom = 1
+border_color = Color(0.38, 0.91, 0.77, 0.76)
+corner_radius_top_left = 9
+corner_radius_top_right = 9
+corner_radius_bottom_right = 9
+corner_radius_bottom_left = 9
+shadow_color = Color(0, 0, 0, 0.48)
+shadow_size = 12
+shadow_offset = Vector2(0, 4)
 
 [sub_resource type="StyleBoxEmpty" id="StyleButtonFocus"]
 
@@ -75,6 +113,8 @@ script = ExtResource("2_map")
 
 [node name="Units" type="Node2D" parent="World"]
 
+[node name="Effects" type="Node2D" parent="World"]
+
 [node name="StrategyCamera" type="Camera2D" parent="."]
 enabled = true
 script = ExtResource("3_camera")
@@ -89,6 +129,40 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
+script = ExtResource("4_hud")
+
+[node name="TurnBanner" type="PanelContainer" parent="HUD/Root"]
+visible = false
+layout_mode = 0
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -174.0
+offset_top = -31.0
+offset_right = 174.0
+offset_bottom = 31.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleTurnBanner")
+
+[node name="Margin" type="MarginContainer" parent="HUD/Root/TurnBanner"]
+layout_mode = 2
+theme_override_constants/margin_left = 24
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 24
+theme_override_constants/margin_bottom = 12
+
+[node name="Label" type="Label" parent="HUD/Root/TurnBanner/Margin"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.55, 1, 0.87, 1)
+theme_override_colors/font_outline_color = Color(0.01, 0.025, 0.03, 0.9)
+theme_override_constants/outline_size = 3
+theme_override_font_sizes/font_size = 21
+text = "PLAYER TURN"
+horizontal_alignment = 1
+vertical_alignment = 1
 
 [node name="TopLeftPanel" type="PanelContainer" parent="HUD/Root"]
 layout_mode = 0
@@ -113,6 +187,8 @@ theme_override_constants/separation = 2
 [node name="Title" type="Label" parent="HUD/Root/TopLeftPanel/Margin/VBox"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.39, 1, 0.8, 1)
+theme_override_colors/font_outline_color = Color(0.01, 0.03, 0.035, 0.9)
+theme_override_constants/outline_size = 3
 theme_override_font_sizes/font_size = 21
 text = "HEX REALMS"
 
@@ -265,8 +341,9 @@ theme_override_font_sizes/font_size = 12
 theme_override_styles/normal = SubResource("StyleButton")
 theme_override_styles/hover = SubResource("StyleButtonHover")
 theme_override_styles/pressed = SubResource("StyleButtonPressed")
+theme_override_styles/disabled = SubResource("StyleButtonDisabled")
 theme_override_styles/focus = SubResource("StyleButtonFocus")
-text = "FOUND CITY  [C]"
+text = "⚑  FOUND CITY  [C]"
 disabled = true
 
 [node name="EndTurnButton" type="Button" parent="HUD/Root/ControlsPanel/Margin/VBox"]
@@ -278,8 +355,9 @@ theme_override_font_sizes/font_size = 13
 theme_override_styles/normal = SubResource("StyleButton")
 theme_override_styles/hover = SubResource("StyleButtonHover")
 theme_override_styles/pressed = SubResource("StyleButtonPressed")
+theme_override_styles/disabled = SubResource("StyleButtonDisabled")
 theme_override_styles/focus = SubResource("StyleButtonFocus")
-text = "END PLAYER TURN  [SPACE]"
+text = "▶  END PLAYER TURN  [SPACE]"
 
 [node name="NewMapButton" type="Button" parent="HUD/Root/ControlsPanel/Margin/VBox"]
 layout_mode = 2
@@ -290,8 +368,9 @@ theme_override_font_sizes/font_size = 12
 theme_override_styles/normal = SubResource("StyleButton")
 theme_override_styles/hover = SubResource("StyleButtonHover")
 theme_override_styles/pressed = SubResource("StyleButtonPressed")
+theme_override_styles/disabled = SubResource("StyleButtonDisabled")
 theme_override_styles/focus = SubResource("StyleButtonFocus")
-text = "GENERATE NEW MAP"
+text = "↻  GENERATE NEW MAP"
 
 [node name="ControlsHint" type="Label" parent="HUD/Root"]
 layout_mode = 0

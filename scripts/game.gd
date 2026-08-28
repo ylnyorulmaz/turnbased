@@ -9,6 +9,7 @@ const INITIAL_SEED := 42_082_026
 const MIN_CITY_DISTANCE := 3
 const UNIT_SCRIPT := preload("res://scripts/procedural_unit.gd")
 const CITY_SCRIPT := preload("res://scripts/procedural_city.gd")
+const EFFECT_SCRIPT := preload("res://scripts/procedural_effect.gd")
 const PLAYER_CITY_NAMES := ["Haven", "Aurora", "Stonegate", "Greenwatch"]
 const AI_CITY_NAMES := ["Ashen Hold", "Red Spire", "Iron Hollow", "Emberfall"]
 
@@ -24,10 +25,12 @@ var active_player_id := PLAYER_ID
 var movement_locked := false
 var ai_running := false
 var randomizer := RandomNumberGenerator.new()
+var _turn_banner_tween: Tween = null
 
 @onready var hex_map: HexMap = $World/HexMap
 @onready var cities_layer: Node2D = $World/Cities
 @onready var units_layer: Node2D = $World/Units
+@onready var effects_layer: Node2D = $World/Effects
 @onready var strategy_camera: StrategyCamera = $StrategyCamera
 
 @onready var turn_label: Label = $HUD/Root/TopLeftPanel/Margin/VBox/TurnLabel
@@ -39,6 +42,8 @@ var randomizer := RandomNumberGenerator.new()
 @onready var found_city_button: Button = $HUD/Root/ControlsPanel/Margin/VBox/FoundCityButton
 @onready var end_turn_button: Button = $HUD/Root/ControlsPanel/Margin/VBox/EndTurnButton
 @onready var new_map_button: Button = $HUD/Root/ControlsPanel/Margin/VBox/NewMapButton
+@onready var turn_banner: PanelContainer = $HUD/Root/TurnBanner
+@onready var turn_banner_label: Label = $HUD/Root/TurnBanner/Margin/Label
 
 
 func _ready() -> void:
@@ -62,6 +67,8 @@ func _start_new_game(seed_value: int) -> void:
 			city.queue_free()
 	units.clear()
 	cities.clear()
+	for effect in effects_layer.get_children():
+		effect.queue_free()
 
 	current_seed = seed_value
 	current_turn = 1
@@ -87,6 +94,7 @@ func _start_new_game(seed_value: int) -> void:
 	_set_controls_locked(false)
 	_set_status("Your turn. Found a city or move a unit; Space ends the turn.")
 	_select_unit(player_settler)
+	_show_turn_banner("PLAYER TURN", Color("43d9b5"))
 	call_deferred("_focus_camera_on_map")
 
 
@@ -321,6 +329,7 @@ func _animate_unit_path(unit: ProceduralUnit, path: Array, cost: int) -> void:
 	if path.is_empty() or not is_instance_valid(unit):
 		return
 	unit.spend_movement(cost)
+	_spawn_effect(ProceduralEffect.EffectKind.MOVE_DUST, unit.position, unit.team_color)
 	unit.grid_coord = path.back()
 	var tween := create_tween()
 	tween.set_trans(Tween.TRANS_SINE)
@@ -330,6 +339,7 @@ func _animate_unit_path(unit: ProceduralUnit, path: Array, cost: int) -> void:
 	await tween.finished
 	if is_instance_valid(unit):
 		_update_unit_z_index(unit)
+		_spawn_effect(ProceduralEffect.EffectKind.MOVE_DUST, unit.position, unit.team_color)
 
 
 func _player_attack(target: ProceduralUnit) -> void:
@@ -366,6 +376,21 @@ func _perform_attack(attacker: ProceduralUnit, target: ProceduralUnit) -> bool:
 	tween.tween_property(attacker, "position", strike_position, 0.10)
 	tween.tween_property(attacker, "position", origin, 0.13)
 	await tween.finished
+	var strike_direction := target.position - attacker.position
+	_spawn_effect(
+		ProceduralEffect.EffectKind.IMPACT,
+		target.position + Vector2(0.0, -18.0),
+		attacker.team_color,
+		strike_direction,
+	)
+	_spawn_effect(
+		ProceduralEffect.EffectKind.DAMAGE_TEXT,
+		target.position,
+		Color("ff8b70"),
+		Vector2.ZERO,
+		"-%d" % attacker.attack_damage,
+	)
+	strategy_camera.kick_shake(5.5)
 	var defeated := target.take_damage(attacker.attack_damage)
 	if defeated:
 		_remove_unit(target)
@@ -396,6 +421,8 @@ func _on_found_city_pressed() -> void:
 
 func _found_city(settler: ProceduralUnit) -> ProceduralCity:
 	var city := _spawn_city(settler.grid_coord, settler.owner_id)
+	_spawn_effect(ProceduralEffect.EffectKind.CITY_BURST, city.position, city.team_color)
+	strategy_camera.kick_shake(2.6)
 	_remove_unit(settler)
 	return city
 
@@ -433,6 +460,7 @@ func _on_end_turn_pressed() -> void:
 	_update_turn_ui()
 	_set_controls_locked(true)
 	_set_status("AI turn: the red faction is acting...")
+	_show_turn_banner("AI TURN", Color("ef735c"))
 	_run_ai_turn()
 
 
@@ -528,6 +556,7 @@ func _start_player_turn() -> void:
 	_update_turn_ui()
 	_set_controls_locked(false)
 	_set_status("Round %d: your units are ready." % current_turn)
+	_show_turn_banner("ROUND %02d  ·  PLAYER" % current_turn, Color("43d9b5"))
 	var first_player_unit := _first_unit_for_owner(PLAYER_ID)
 	if first_player_unit != null:
 		_select_unit(first_player_unit)
@@ -684,6 +713,10 @@ func _on_new_map_pressed() -> void:
 
 
 func _on_tile_hovered(coord: Vector2i, cell: Dictionary) -> void:
+	if selected_unit != null and reachable_paths.has(coord):
+		hex_map.set_preview_path(reachable_paths[coord])
+	else:
+		hex_map.set_preview_path([])
 	if coord == HexMap.INVALID_COORD or cell.is_empty():
 		tile_info_label.text = "Hover a hex to inspect terrain"
 		return
@@ -710,7 +743,7 @@ func _update_turn_ui() -> void:
 		"font_color", Color("f2c64f") if active_player_id == PLAYER_ID else Color("ef735c")
 	)
 	seed_label.text = "WORLD SEED  %d" % current_seed
-	end_turn_button.text = "END PLAYER TURN  [SPACE]" if not ai_running else "AI TURN..."
+	end_turn_button.text = "▶  END PLAYER TURN  [SPACE]" if not ai_running else "◆  AI TURN..."
 
 
 func _update_unit_ui() -> void:
@@ -757,6 +790,45 @@ func _set_controls_locked(value: bool) -> void:
 
 func _set_status(message: String) -> void:
 	status_label.text = message
+	status_label.modulate = Color(1.18, 1.18, 1.18, 1.0)
+	var tween := create_tween()
+	tween.tween_property(status_label, "modulate", Color.WHITE, 0.22)
+
+
+func _spawn_effect(
+	kind: int,
+	world_position: Vector2,
+	color_value: Color,
+	direction: Vector2 = Vector2.RIGHT,
+	text_value: String = "",
+) -> ProceduralEffect:
+	var effect := EFFECT_SCRIPT.new() as ProceduralEffect
+	effects_layer.add_child(effect)
+	effect.position = world_position
+	effect.configure(kind, color_value, direction, text_value)
+	return effect
+
+
+func _show_turn_banner(message: String, color_value: Color) -> void:
+	if not is_instance_valid(turn_banner):
+		return
+	if _turn_banner_tween != null and _turn_banner_tween.is_valid():
+		_turn_banner_tween.kill()
+	turn_banner.visible = true
+	turn_banner_label.text = message
+	turn_banner_label.add_theme_color_override("font_color", color_value.lightened(0.18))
+	turn_banner.modulate = Color(1.0, 1.0, 1.0, 0.0)
+	turn_banner.scale = Vector2(0.88, 0.88)
+	turn_banner.pivot_offset = turn_banner.size * 0.5
+	_turn_banner_tween = create_tween()
+	_turn_banner_tween.set_trans(Tween.TRANS_BACK)
+	_turn_banner_tween.set_ease(Tween.EASE_OUT)
+	_turn_banner_tween.tween_property(turn_banner, "modulate:a", 1.0, 0.18)
+	_turn_banner_tween.parallel().tween_property(turn_banner, "scale", Vector2.ONE, 0.24)
+	_turn_banner_tween.tween_interval(0.72)
+	_turn_banner_tween.set_trans(Tween.TRANS_SINE)
+	_turn_banner_tween.tween_property(turn_banner, "modulate:a", 0.0, 0.30)
+	_turn_banner_tween.tween_callback(turn_banner.hide)
 
 
 func _focus_camera_on_map() -> void:

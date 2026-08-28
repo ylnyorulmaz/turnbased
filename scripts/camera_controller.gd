@@ -7,11 +7,15 @@ const MIN_ZOOM := 0.45
 const MAX_ZOOM := 1.65
 
 var _dragging := false
+var _shake_strength := 0.0
+var _shake_time := 0.0
+var _shake_random := RandomNumberGenerator.new()
 
 
 func _ready() -> void:
 	position_smoothing_enabled = true
 	position_smoothing_speed = 9.0
+	_shake_random.randomize()
 
 
 func _process(delta: float) -> void:
@@ -27,6 +31,20 @@ func _process(delta: float) -> void:
 
 	if direction != Vector2.ZERO:
 		position += direction.normalized() * PAN_SPEED * delta / maxf(zoom.x, 0.01)
+
+	if _shake_time > 0.0:
+		_shake_time = maxf(0.0, _shake_time - delta)
+		var falloff := clampf(_shake_time / 0.24, 0.0, 1.0)
+		offset = Vector2(
+			_shake_random.randf_range(-1.0, 1.0), _shake_random.randf_range(-1.0, 1.0)
+		) * _shake_strength * falloff
+	else:
+		offset = offset.lerp(Vector2.ZERO, minf(1.0, delta * 18.0))
+
+
+func kick_shake(strength: float) -> void:
+	_shake_strength = maxf(_shake_strength, strength)
+	_shake_time = 0.24
 
 
 func focus_on(bounds: Rect2) -> void:
