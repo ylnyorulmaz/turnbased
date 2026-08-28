@@ -71,6 +71,8 @@ script = ExtResource("1_game")
 [node name="HexMap" type="Node2D" parent="World"]
 script = ExtResource("2_map")
 
+[node name="Cities" type="Node2D" parent="World"]
+
 [node name="Units" type="Node2D" parent="World"]
 
 [node name="StrategyCamera" type="Camera2D" parent="."]
@@ -118,7 +120,7 @@ text = "HEX REALMS"
 layout_mode = 2
 theme_override_colors/font_color = Color(0.95, 0.78, 0.31, 1)
 theme_override_font_sizes/font_size = 14
-text = "TURN 01"
+text = "ROUND 01 · PLAYER"
 
 [node name="SeedLabel" type="Label" parent="HUD/Root/TopLeftPanel/Margin/VBox"]
 layout_mode = 2
@@ -226,7 +228,7 @@ anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
 offset_left = -306.0
-offset_top = -201.0
+offset_top = -246.0
 offset_right = -18.0
 offset_bottom = -18.0
 grow_horizontal = 0
@@ -254,6 +256,19 @@ text = "Select a highlighted hex to move."
 autowrap_mode = 2
 vertical_alignment = 1
 
+[node name="FoundCityButton" type="Button" parent="HUD/Root/ControlsPanel/Margin/VBox"]
+layout_mode = 2
+mouse_default_cursor_shape = 2
+theme_override_colors/font_color = Color(0.96, 0.86, 0.58, 1)
+theme_override_colors/font_hover_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 12
+theme_override_styles/normal = SubResource("StyleButton")
+theme_override_styles/hover = SubResource("StyleButtonHover")
+theme_override_styles/pressed = SubResource("StyleButtonPressed")
+theme_override_styles/focus = SubResource("StyleButtonFocus")
+text = "FOUND CITY  [C]"
+disabled = true
+
 [node name="EndTurnButton" type="Button" parent="HUD/Root/ControlsPanel/Margin/VBox"]
 layout_mode = 2
 mouse_default_cursor_shape = 2
@@ -264,7 +279,7 @@ theme_override_styles/normal = SubResource("StyleButton")
 theme_override_styles/hover = SubResource("StyleButtonHover")
 theme_override_styles/pressed = SubResource("StyleButtonPressed")
 theme_override_styles/focus = SubResource("StyleButtonFocus")
-text = "END TURN  [SPACE]"
+text = "END PLAYER TURN  [SPACE]"
 
 [node name="NewMapButton" type="Button" parent="HUD/Root/ControlsPanel/Margin/VBox"]
 layout_mode = 2

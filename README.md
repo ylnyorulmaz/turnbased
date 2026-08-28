@@ -1,6 +1,6 @@
 # Hex Realms
 
-An asset-free, turn-based strategy foundation built with Godot 4. It renders a seeded isometric hex world, generates all terrain textures at runtime, and starts with a playable Settler and Warrior.
+An asset-free, turn-based strategy foundation built with Godot 4. It renders a seeded isometric hex world, generates all terrain textures at runtime, and pits a cyan player faction against a simple red AI faction.
 
 ## Current playable slice
 
@@ -9,8 +9,11 @@ An asset-free, turn-based strategy foundation built with Godot 4. It renders a s
 - Four terrain types: Sea, Plains, Hills, and Mountains.
 - Runtime-generated pixel textures plus coordinate-seeded vector details; there are no image assets.
 - Elevated top and side faces for an isometric 2D look.
-- Procedurally drawn Settler and Warrior units.
-- Unit selection, terrain movement costs, multi-hex pathfinding, movement animation, and turn reset.
+- Procedurally drawn Settler, Warrior, and City visuals.
+- Player → AI round phases with separate movement resets and input locking.
+- A simple AI that founds a city, pathfinds toward the nearest player target, and attacks when adjacent.
+- Settlers found named cities and are consumed in the process.
+- Unit selection, terrain movement costs, multi-hex pathfinding, movement animation, health, and melee attacks.
 - Pan, middle-mouse drag, zoom, hover inspection, and random map regeneration.
 
 ## Run it
@@ -25,9 +28,10 @@ No imports or third-party packages are required.
 
 | Input | Action |
 | --- | --- |
-| Left click | Select a unit or move to a highlighted hex |
+| Left click | Select, move to a green hex, or attack a red hex |
 | Right click / Esc | Clear selection |
-| Space | End turn |
+| C / Found City | Consume the selected Settler and found a city |
+| Space | End the player phase and run the AI phase |
 | WASD / arrow keys | Pan camera |
 | Middle-mouse drag | Pan camera |
 | Mouse wheel | Zoom |
@@ -41,6 +45,17 @@ No imports or third-party packages are required.
 | Plains | 1 movement | 1 movement |
 | Hills | 2 movement | 2 movement |
 | Mountains | Impassable | 2 movement |
+
+Warriors have 3 health, deal 1 adjacent damage, and spend 1 movement point per attack. Settlers have 1 health and cannot attack. A city must be founded on Plains or Hills and at least three hexes from every existing city.
+
+## Round and AI logic
+
+1. The player moves, attacks, or founds a city with cyan units.
+2. Ending the phase locks player input and restores the red faction's movement.
+3. The AI Settler founds on a legal tile or paths toward the nearest legal city site.
+4. The AI Warrior uses terrain-aware Dijkstra pathfinding toward the closest player unit, falling back to a player city.
+5. If the Warrior reaches an adjacent enemy unit with movement remaining, it attacks.
+6. Control returns to the player, the round counter advances, and cyan movement is restored.
 
 ## Map generation pipeline
 
@@ -59,12 +74,14 @@ The same seed always reproduces the same terrain data and procedural texture fam
 
 ```text
 scenes/main.tscn                 Main world and HUD
-scripts/game.gd                  Turn state, selection, Dijkstra reachability, movement
+scripts/game.gd                  Round phases, AI, city founding, combat and movement
 scripts/map_generator.gd         Seeded terrain data generation and hex coordinate helpers
 scripts/hex_map.gd               Isometric renderer, runtime textures, picking and highlights
 scripts/procedural_unit.gd       Asset-free unit art and movement rules
+scripts/procedural_city.gd       Asset-free faction city renderer
 scripts/camera_controller.gd     Strategy camera controls and map framing
 tests/map_generator_test.gd      Headless generator smoke test
+tests/game_smoke_test.gd         Player move, city founding and full AI phase test
 ```
 
 ## Smoke test
@@ -78,4 +95,4 @@ godot --headless --path . --script tests/game_smoke_test.gd
 
 ## Deliberate limits of this foundation
 
-There is no combat, city founding, production, AI opponent, fog of war, save system, or multiplayer yet. Those systems should be added after the map, movement, and turn loop are stable rather than mixed into the first slice.
+There is no city production, territorial ownership, city capture, fog of war, save system, diplomacy, or multiplayer yet. Combat is intentionally minimal: one adjacent attack value and health pool, with no counterattack or unit classes beyond Settler and Warrior.

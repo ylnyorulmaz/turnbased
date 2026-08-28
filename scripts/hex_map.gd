@@ -18,6 +18,7 @@ var map_height := 0
 var map_seed := 0
 var render_order: Array[Vector2i] = []
 var reachable_tiles: Dictionary = {}
+var attack_tiles: Dictionary = {}
 var selected_coord := INVALID_COORD
 var hovered_coord := INVALID_COORD
 var terrain_textures: Dictionary = {}
@@ -40,6 +41,7 @@ func set_map(new_cells: Dictionary, width: int, height: int, seed_value: int) ->
 	map_height = height
 	map_seed = seed_value
 	reachable_tiles.clear()
+	attack_tiles.clear()
 	selected_coord = INVALID_COORD
 	hovered_coord = INVALID_COORD
 	_build_render_order()
@@ -72,6 +74,13 @@ func set_reachable_tiles(coords: Array) -> void:
 	queue_redraw()
 
 
+func set_attack_tiles(coords: Array) -> void:
+	attack_tiles.clear()
+	for coord in coords:
+		attack_tiles[coord] = true
+	queue_redraw()
+
+
 func set_selected_coord(coord: Vector2i) -> void:
 	selected_coord = coord
 	queue_redraw()
@@ -79,6 +88,7 @@ func set_selected_coord(coord: Vector2i) -> void:
 
 func clear_interaction_highlights() -> void:
 	reachable_tiles.clear()
+	attack_tiles.clear()
 	selected_coord = INVALID_COORD
 	queue_redraw()
 
@@ -183,6 +193,9 @@ func _draw_tile(coord: Vector2i, cell: Dictionary) -> void:
 	if reachable_tiles.has(coord):
 		draw_colored_polygon(polygon, Color(0.16, 0.90, 0.72, 0.20))
 		draw_polyline(outline, Color(0.32, 1.0, 0.78, 0.92), 2.2, true)
+	if attack_tiles.has(coord):
+		draw_colored_polygon(polygon, Color(0.95, 0.18, 0.16, 0.25))
+		draw_polyline(outline, Color(1.0, 0.32, 0.26, 0.98), 2.7, true)
 	if coord == hovered_coord:
 		draw_colored_polygon(polygon, Color(1.0, 1.0, 1.0, 0.10))
 		draw_polyline(outline, Color(0.92, 0.97, 1.0, 0.95), 2.0, true)

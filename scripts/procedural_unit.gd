@@ -14,6 +14,9 @@ var owner_id := 1
 var display_name := "Settler"
 var movement_max := 2
 var movement_left := 2
+var health_max := 1
+var health := 1
+var attack_damage := 0
 var selected := false
 
 var team_color := Color("43d9b5")
@@ -27,10 +30,15 @@ func configure(kind: int, coord: Vector2i, player_id: int = 1) -> void:
 		UnitKind.SETTLER:
 			display_name = "Settler"
 			movement_max = 2
+			health_max = 1
+			attack_damage = 0
 		UnitKind.WARRIOR:
 			display_name = "Warrior"
 			movement_max = 3
+			health_max = 3
+			attack_damage = 1
 	movement_left = movement_max
+	health = health_max
 	team_color = Color("43d9b5") if owner_id == 1 else Color("ef735c")
 	queue_redraw()
 
@@ -48,6 +56,16 @@ func reset_for_new_turn() -> void:
 func spend_movement(amount: int) -> void:
 	movement_left = maxi(0, movement_left - amount)
 	queue_redraw()
+
+
+func take_damage(amount: int) -> bool:
+	health = maxi(0, health - amount)
+	queue_redraw()
+	return health <= 0
+
+
+func can_attack() -> bool:
+	return unit_kind == UnitKind.WARRIOR and attack_damage > 0 and movement_left > 0
 
 
 func movement_cost(terrain: int) -> int:
@@ -84,6 +102,7 @@ func _draw() -> void:
 			_draw_warrior()
 
 	_draw_movement_pips()
+	_draw_health_pips()
 
 
 func _draw_settler() -> void:
@@ -211,6 +230,14 @@ func _draw_movement_pips() -> void:
 	for index in range(movement_max):
 		var color := team_color if index < movement_left else Color(0.18, 0.22, 0.23, 0.72)
 		draw_circle(Vector2(start_x + float(index) * gap, 8.5), 2.1, color)
+
+
+func _draw_health_pips() -> void:
+	var gap := 6.0
+	var start_x := -float(health_max - 1) * gap * 0.5
+	for index in range(health_max):
+		var color := Color("f06b62") if index < health else Color(0.16, 0.18, 0.19, 0.82)
+		draw_circle(Vector2(start_x + float(index) * gap, -45.0), 2.2, color)
 
 
 func _ellipse_points(center: Vector2, radii: Vector2, segments: int = 32) -> PackedVector2Array:
